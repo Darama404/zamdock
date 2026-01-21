@@ -1,0 +1,226 @@
+/*
+ * Zammad Custom Stylesheet
+ * File: /opt/zammad/app/assets/stylesheets/custom/internal-note.css
+ */
+
+/* =====================================================
+   HIDE "SET TO INTERNAL" AND "SET TO PUBLIC" BUTTONS
+   ===================================================== */
+
+/* Hide both toggle buttons using data-type attribute */
+a.article-action[data-type="internal"],
+a.article-action[data-type="public"] {
+  display: none !important;
+}
+
+/* Alternative selector - hide by class combination */
+.article-action.js-ArticleAction[data-type="internal"],
+.article-action.js-ArticleAction[data-type="public"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide the parent container if it becomes empty */
+.article-actions:empty {
+  display: none !important;
+}
+
+/* =====================================================
+   REMOVE INTERNAL BORDER (DIAGONAL STRIPES)
+   ===================================================== */
+
+/* Remove the internal article border background */
+.is-internal .internal-border {
+  background: none !important;
+  background-image: none !important;
+}
+
+/* Remove border from internal articles */
+.ticket-article-item.is-internal {
+  background: transparent !important;
+}
+
+/* Force remove any gradient backgrounds */
+.internal-border {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Remove the repeating gradient pattern */
+*[class*="internal"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* =====================================================
+   HIDE LOCK ICONS
+   ===================================================== */
+
+/* Hide lock icon for internal */
+svg.icon-lock,
+.icon.icon-lock {
+  display: none !important;
+}
+
+/* Hide lock-open icon for public */
+svg.icon-lock-open,
+.icon.icon-lock-open {
+  display: none !important;
+}
+
+/* Hide icons in article actions */
+.article-action-icon.icon-lock,
+.article-action-icon.icon-lock-open {
+  display: none !important;
+}
+
+/* =====================================================
+   HIDE TEXT LABELS
+   ===================================================== */
+
+/* Hide "set to internal" and "set to public" text */
+.article-action-name {
+  display: none !important;
+}
+
+/* Alternative - hide span inside article-action */
+.article-action span {
+  display: none !important;
+}
+
+/* =====================================================
+   REMOVE BORDERS FROM ALL ARTICLES
+   ===================================================== */
+
+/* Remove all article borders */
+.ticket-article-item {
+  border-left: none !important;
+  border: none !important;
+}
+
+/* Remove border from article containers */
+.ticket-article {
+  border-left: none !important;
+  border: none !important;
+}
+
+/* =====================================================
+   CLEAN UP ARTICLE APPEARANCE
+   ===================================================== */
+
+/* Make all articles look uniform */
+.ticket-article-item,
+.ticket-article-item.is-internal,
+.ticket-article-item.is-public {
+  background: transparent !important;
+  border-left-width: 0 !important;
+}
+
+/* Remove any colored indicators */
+.ticket-article-item::before,
+.ticket-article-item::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* =====================================================
+   HIDE VISIBILITY INDICATORS IN ARTICLE META
+   ===================================================== */
+
+/* Hide visibility badges/labels */
+.article-meta-visibility,
+.article-visibility-badge {
+  display: none !important;
+}
+
+/* Hide visibility in article meta info */
+[data-key="visibility"],
+.article-meta [data-key="visibility"] {
+  display: none !important;
+}
+
+/* =====================================================
+   HIDE INTERNAL NOTE OPTION IN COMPOSER
+   ===================================================== */
+
+/* Hide visibility toggle in new article form */
+.articleNew-visibility,
+.js-selectableTypes {
+  display: none !important;
+}
+
+/* Hide "note" article type option */
+.articleNew .dropdown-menu li[data-value="note"],
+[data-value="note"] {
+  display: none !important;
+}
+
+/* Hide visibility form group */
+.articleNew .form-group[data-attribute-name="visibility"],
+.form-group.article-visibility {
+  display: none !important;
+}
+
+/* =====================================================
+   ADDITIONAL SAFETY OVERRIDES
+   ===================================================== */
+
+/* Remove any box-shadow that looks like border */
+.ticket-article-item,
+.ticket-article {
+  box-shadow: none !important;
+}
+
+/* Force transparent backgrounds */
+.is-internal,
+[class*="is-internal"] {
+  background: transparent !important;
+  background-image: none !important;
+  background-color: transparent !important;
+}
+
+/* Clean up padding after removing borders */
+.ticket-article-item {
+  padding-left: 15px !important;
+  margin-left: 0 !important;
+}
+
+/* =====================================================
+   PREVENT CLICKABLE AREAS FOR REMOVED ELEMENTS
+   ===================================================== */
+
+/* Disable pointer events on hidden action links */
+a.article-action[data-type="internal"],
+a.article-action[data-type="public"] {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* =====================================================
+   CLEANUP EMPTY SPACES
+   ===================================================== */
+
+/* Remove margin/padding from now-hidden elements */
+.article-action[data-type="internal"],
+.article-action[data-type="public"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* =====================================================
+   FORCE OVERRIDE CSS VARIABLES (NUCLEAR OPTION)
+   ===================================================== */
+
+/* Override the internal border colors to transparent */
+:root {
+  --border-internal: transparent !important;
+  --border-internal-stripe: transparent !important;
+}
+
+/* Make sure internal articles don't stand out */
+.ticket-article-item.is-internal {
+  opacity: 1 !important;
+}

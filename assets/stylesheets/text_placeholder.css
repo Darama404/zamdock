@@ -1,0 +1,28 @@
+/*
+ * Zammad Custom Stylesheet
+ * File: opt/zammad/app/assets/stylesheets/custom/text_placeholder.css
+ */
+.newTicket input[name="title"]::placeholder,
+.content.active input[name="title"]::placeholder {
+    color: #999 !important;
+    opacity: 0.7 !important;
+    font-style: italic !important;
+}
+
+/* Placeholder untuk TEXT di New Ticket ONLY */
+.newTicket .richtext-content[contenteditable="true"][data-placeholder]:empty::before {
+    content: attr(data-placeholder) !important;
+    color: #999 !important;
+    opacity: 0.7 !important;
+    font-style: italic !important;
+    pointer-events: none !important;
+}
+
+.newTicket .richtext-content[contenteditable="true"]:focus[data-placeholder]:empty::before {
+    opacity: 0.5 !important;
+}
+
+/* JANGAN touch existing ticket reply box */
+.article-add .richtext-content::before {
+    /* Biarkan default Zammad "Enter Note or" */
+}
