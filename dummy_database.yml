@@ -1,0 +1,6 @@
+production:
+  adapter: postgresql
+  database: zammad_production
+  username: zammad
+  password: 1q2w3e4r5t
+  host: 127.0.0.1
