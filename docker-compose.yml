@@ -120,14 +120,15 @@ services:
       context: .
       dockerfile: Dockerfile
     command: ["zammad-railsserver"]
+    volumes:
+      - zammad-storage:/opt/zammad/storage
+      - zammad-assets:/opt/zammad/public/assets
 
   zammad-redis:
     image: redis:${REDIS_VERSION:-7.4.7-alpine}
     restart: ${RESTART:-always}
     volumes:
       - redis-data:/data
-      - zammad-storage:/opt/zammad/storage
-      - zammad-assets:/opt/zammad/public/assets
 
   zammad-scheduler:
     <<: *zammad-service
