@@ -101,6 +101,8 @@ services:
       - "${NGINX_EXPOSE_PORT:-8080}:${NGINX_PORT:-8080}"
     depends_on:
       - zammad-railsserver
+    volumes:
+      - zammad-assets:/opt/zammad/public/assets
 
   zammad-postgresql:
     environment:
@@ -124,6 +126,8 @@ services:
     restart: ${RESTART:-always}
     volumes:
       - redis-data:/data
+      - zammad-storage:/opt/zammad/storage
+      - zammad-assets:/opt/zammad/public/assets
 
   zammad-scheduler:
     <<: *zammad-service
@@ -143,4 +147,6 @@ volumes:
   zammad-backup:
     driver: local
   zammad-storage:
+    driver: local
+  zammad-assets:
     driver: local
