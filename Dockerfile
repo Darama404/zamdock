@@ -19,6 +19,7 @@ RUN mkdir -p /opt/zammad/app/assets/javascripts/custom/templates \
 
 # 3. Copy Semua Asset Custom
 COPY assets/javascripts/ /opt/zammad/app/assets/javascripts/custom/
+COPY assets/templates/ /opt/zammad/app/assets/javascripts/custom/templates/
 COPY assets/stylesheets/ /opt/zammad/app/assets/stylesheets/custom/
 COPY overrides/script/template_manager.sh /opt/zammad/script/custom/
 
