@@ -21,6 +21,8 @@ RUN mkdir -p /opt/zammad/app/assets/javascripts/custom/templates \
 COPY assets/javascripts/ /opt/zammad/app/assets/javascripts/custom/
 COPY assets/templates/ /opt/zammad/app/assets/javascripts/custom/templates/
 COPY assets/stylesheets/ /opt/zammad/app/assets/stylesheets/custom/
+COPY overrides/controllers/ /opt/zammad/app/controllers/
+COPY overrides/routes/ /opt/zammad/config/routes/
 COPY overrides/script/template_manager.sh /opt/zammad/script/custom/
 
 # 4. Copy Entrypoint Custom
