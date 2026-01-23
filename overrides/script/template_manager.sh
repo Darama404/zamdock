@@ -312,7 +312,7 @@ apply_changes() {
   }
   
   # Run assets precompile with timeout
-  if timeout 300 zammad run rake assets:precompile >> "$DEPLOY_LOG" 2>&1; then
+  if timeout 300 rake assets:precompile >> "$DEPLOY_LOG" 2>&1; then
     deploy_log "✅ Assets compiled successfully"
     echo '{"success":true,"stage":"compiled","message":"Assets compiled successfully","progress":60}'
   else

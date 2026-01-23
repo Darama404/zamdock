@@ -395,15 +395,19 @@ class TemplateManagementController < ApplicationController
 
   def execute_precompile
     cd_zammad && execute_command_with_timeout(
-      "zammad run rake assets:precompile",
+      "rake assets:precompile",
       300  # 5 minute timeout
     )
   end
 
   def execute_restart_zammad
+    # Di Docker, kita tidak bisa pakai systemctl.
+    # Kita coba trigger restart via file restart.txt (Standard Passenger/Puma)
+    # Jika tidak ngefek, user harus restart container manual via 'docker-compose restart'
+    log_deployment("⚠️ Running in Docker: Manual container restart might be required if changes don't appear.")
     execute_command_with_timeout(
-      "sudo systemctl restart zammad",
-      60  # 1 minute timeout
+      "touch /opt/zammad/tmp/restart.txt",
+      10
     )
   end
 

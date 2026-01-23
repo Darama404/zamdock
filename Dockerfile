@@ -14,8 +14,7 @@ RUN apt-get update && \
 
 # 2. Buat Struktur Folder Custom
 RUN mkdir -p /opt/zammad/app/assets/javascripts/custom/templates \
-    && mkdir -p /opt/zammad/app/assets/stylesheets/custom \
-    && mkdir -p /opt/zammad/script/custom
+    && mkdir -p /opt/zammad/app/assets/stylesheets/custom
 
 # 3. Copy Semua Asset Custom
 COPY assets/javascripts/ /opt/zammad/app/assets/javascripts/custom/
@@ -23,7 +22,7 @@ COPY assets/templates/ /opt/zammad/app/assets/javascripts/custom/templates/
 COPY assets/stylesheets/ /opt/zammad/app/assets/stylesheets/custom/
 COPY overrides/controllers/ /opt/zammad/app/controllers/
 COPY overrides/routes/ /opt/zammad/config/routes/
-COPY overrides/script/template_manager.sh /opt/zammad/script/custom/
+COPY overrides/script/template_manager.sh /opt/zammad/script/
 
 # 4. Copy Entrypoint Custom
 COPY docker-entrypoint-custom.sh /usr/local/bin/
@@ -52,11 +51,11 @@ RUN echo "@import 'custom/internal-note.css';" >> /opt/zammad/app/assets/stylesh
 # 8. Fix Permissions & Line Endings (PENTING!)
 # Kita jalankan dos2unix ke script .sh supaya tidak error "not found" karena format Windows
 RUN dos2unix /usr/local/bin/docker-entrypoint-custom.sh \
-    && dos2unix /opt/zammad/script/custom/template_manager.sh \
+    && dos2unix /opt/zammad/script/template_manager.sh \
     && chmod +x /usr/local/bin/docker-entrypoint-custom.sh \
-    && chmod +x /opt/zammad/script/custom/template_manager.sh \
+    && chmod +x /opt/zammad/script/template_manager.sh \
     && chown -R zammad:zammad /opt/zammad/app/assets \
-    && chown -R zammad:zammad /opt/zammad/script/custom \
+    && chown -R zammad:zammad /opt/zammad/script \
     && chown zammad:zammad /opt/zammad/config/routes.rb
 
 USER zammad
