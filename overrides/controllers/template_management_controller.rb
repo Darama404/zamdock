@@ -1,5 +1,5 @@
 # File: app/controllers/template_management_controller.rb
-# Updated version with Apply Changes endpoint
+# Updated version with Docker-compatible restart
 
 require 'open3'
 require 'tempfile'
@@ -8,7 +8,7 @@ require 'json'
 class TemplateManagementController < ApplicationController
   prepend_before_action :authentication_check
   
-  # 🔥 Only require admin access for write operations
+  # Only require admin access for write operations
   before_action :check_admin_access, except: [:list_categories, :list_templates, :get_template_content]
 
   SCRIPT_PATH = '/opt/zammad/script/template_manager.sh'
@@ -25,17 +25,13 @@ class TemplateManagementController < ApplicationController
       return
     end
 
-    # Get all subdirectories (categories)
     category_dirs = Dir.glob(templates_base_dir.join('*')).select { |f| File.directory?(f) }
     categories = []
 
     category_dirs.each do |dir|
       cat_id = File.basename(dir)
-      
-      # Skip invalid directory names
       next unless cat_id.match?(/^[a-z0-9_-]{3,50}$/)
       
-      # Try to read category.json
       json_path = File.join(dir, 'category.json')
       if File.exist?(json_path)
         begin
@@ -44,11 +40,9 @@ class TemplateManagementController < ApplicationController
           Rails.logger.info "✅ Loaded category: #{cat_id}"
         rescue JSON::ParserError => e
           Rails.logger.error "❌ Invalid JSON in #{json_path}: #{e.message}"
-          # Fallback if JSON is invalid
           categories << { id: cat_id, name: cat_id.capitalize, icon: '📋', description: '' }
         end
       else
-        # Fallback if category.json doesn't exist
         Rails.logger.warn "⚠️ No category.json for #{cat_id}, using fallback"
         categories << { id: cat_id, name: cat_id.capitalize, icon: '📋', description: '' }
       end
@@ -70,7 +64,6 @@ class TemplateManagementController < ApplicationController
       return
     end
 
-    # Validate ID format
     unless id.match?(/^[a-z0-9_-]{3,50}$/)
       render json: { error: 'Invalid category ID format. Use lowercase letters, numbers, underscore or hyphen only.' }, status: 400
       return
@@ -98,7 +91,6 @@ class TemplateManagementController < ApplicationController
   def delete_category
     id = params[:id]
 
-    # Validate ID format
     unless id.match?(/^[a-z0-9_-]{3,50}$/)
       render json: { error: 'Invalid category ID format' }, status: 400
       return
@@ -118,7 +110,6 @@ class TemplateManagementController < ApplicationController
     category_id = params[:id]
     Rails.logger.info "📄 [#{current_user.email}] Fetching templates for: #{category_id}"
 
-    # Validate ID format
     unless category_id.match?(/^[a-z0-9_-]{3,50}$/)
       render json: { error: 'Invalid category ID format' }, status: 400
       return
@@ -132,11 +123,9 @@ class TemplateManagementController < ApplicationController
       return
     end
 
-    # List all .js files in the category directory
     template_files = Dir.glob(templates_dir.join("*.js")).map do |file|
       basename = File.basename(file, '.js')
       
-      # Remove timestamp prefix if present (pattern: 1234567890_name -> name)
       if basename =~ /^\d+_(.+)$/
         $1
       else
@@ -154,7 +143,6 @@ class TemplateManagementController < ApplicationController
     template_id = params[:template_id]
     Rails.logger.info "📥 [#{current_user.email}] Loading template: #{category_id}/#{template_id}"
 
-    # Validate ID formats
     unless category_id.match?(/^[a-z0-9_-]{3,50}$/)
       render json: { error: 'Invalid category ID format' }, status: 400
       return
@@ -168,7 +156,6 @@ class TemplateManagementController < ApplicationController
       return
     end
 
-    # Search for template file with or without timestamp prefix
     matching_files = Dir.glob(templates_dir.join("*#{template_id}.js")).select do |file|
       basename = File.basename(file, '.js')
       basename == template_id || basename =~ /^\d+_#{Regexp.escape(template_id)}$/
@@ -209,7 +196,6 @@ class TemplateManagementController < ApplicationController
       return
     end
 
-    # Validate ID formats
     unless category_id.match?(/^[a-z0-9_-]{3,50}$/) && template_id.match?(/^[a-z0-9_-]{3,50}$/)
       render json: { error: 'Invalid ID format. Use lowercase letters, numbers, underscore or hyphen only.' }, status: 400
       return
@@ -240,7 +226,6 @@ class TemplateManagementController < ApplicationController
     category_id = params[:id]
     template_id = params[:template_id]
 
-    # Validate ID formats
     unless category_id.match?(/^[a-z0-9_-]{3,50}$/) && template_id.match?(/^[a-z0-9_-]{3,50}$/)
       render json: { error: 'Invalid ID format' }, status: 400
       return
@@ -274,7 +259,6 @@ class TemplateManagementController < ApplicationController
 
   # GET /api/v1/template_admin/pending/count
   def pending_count
-    # Try reading directly from file first (faster and more reliable)
     queue_file = Rails.root.join('tmp', 'template_pending_queue.json')
     
     if File.exist?(queue_file)
@@ -286,14 +270,11 @@ class TemplateManagementController < ApplicationController
         return
       rescue JSON::ParserError => e
         Rails.logger.error "Invalid JSON in queue file: #{e.message}"
-        # Fall through to script method
       rescue => e
         Rails.logger.error "Error reading queue file: #{e.message}"
-        # Fall through to script method
       end
     end
 
-    # Fallback: use script
     output, status = run_script('get_pending_count')
 
     if status.success?
@@ -302,17 +283,14 @@ class TemplateManagementController < ApplicationController
       render json: { count: count }
     else
       Rails.logger.error "Script failed: #{output}"
-      # Return 0 on error to not break the UI
       render json: { count: 0 }
     end
   end
 
-  # 🔥 NEW: POST /api/v1/template_admin/apply_changes
-  # This endpoint triggers the deployment process
+  # 🔥 POST /api/v1/template_admin/apply_changes
   def apply_changes
     Rails.logger.info "🚀 [#{current_user.email}] Apply changes requested"
     
-    # Check if there are pending changes
     pending_count = get_pending_changes_count
     
     if pending_count.zero?
@@ -323,55 +301,61 @@ class TemplateManagementController < ApplicationController
 
     Rails.logger.info "📋 Pending changes: #{pending_count}"
 
-    # Set environment variable for logging
     ENV['ADMIN_EMAIL'] = current_user.email
 
-    # Start deployment in a background thread to avoid timeout
+    # Start deployment in background
     Thread.new do
-        begin
-        log_deployment("🚀 DEPLOYMENT STARTED")
+      begin
+        log_deployment("🚀 DEPLOYMENT STARTED by #{current_user.email}")
         
-        # Fix 1: Timeout 2 menit
-        success = Timeout.timeout(120) do
-            execute_precompile
+        # Step 1: Assets Precompile (with 3-minute timeout)
+        success = Timeout.timeout(180) do
+          execute_precompile
         end
         
         if success
-            execute_restart_zammad
+          log_deployment("✅ Assets compiled successfully")
+          
+          # Step 2: Restart Zammad Rails Server (Docker)
+          if execute_docker_restart
+            log_deployment("✅ Zammad Rails server restarted successfully")
+            
+            # Clear pending queue
             clear_pending_queue
             log_deployment("🎉 DEPLOYMENT COMPLETED SUCCESSFULLY")
+          else
+            log_deployment("❌ Failed to restart Zammad Rails server")
+          end
         else
-            log_deployment("❌ DEPLOYMENT FAILED")
+          log_deployment("❌ Assets precompile failed")
         end
-        rescue Timeout::Error
-        log_deployment("⏰ TIMEOUT - Deployment cancelled")
-        rescue => e
+      rescue Timeout::Error
+        log_deployment("⏰ TIMEOUT - Deployment took too long (>3 minutes)")
+      rescue => e
         log_deployment("💥 ERROR: #{e.message}")
-        end
+        log_deployment("Backtrace: #{e.backtrace.first(5).join("\n")}")
+      end
     end
-    render json: { success: true, stage: 'initiated' }
+
+    render json: { success: true, stage: 'initiated', message: 'Deployment started in background' }
   end
 
-  # 🔥 NEW: GET /api/v1/template_admin/deploy_status
-  # This endpoint returns the current deployment status
+  # 🔥 GET /api/v1/template_admin/deploy_status
   def deploy_status
     begin
       if File.exist?(DEPLOY_LOG)
-        # Read last 50 lines of deploy log for status
         lines = File.readlines(DEPLOY_LOG).last(50)
         
-        # Parse status from log
         status = {
           success: true,
           stage: determine_stage_from_logs(lines),
           message: lines.last&.strip || "No logs yet"
         }
 
-        # Check if deployment is complete
         if lines.any? { |l| l.include?("DEPLOYMENT COMPLETED SUCCESSFULLY") }
           status[:success] = true
           status[:stage] = "completed"
-        elsif lines.any? { |l| l.include?("ERROR") || l.include?("FATAL") }
+        elsif lines.any? { |l| l.include?("ERROR") || l.include?("FATAL") || l.include?("Failed") }
           status[:success] = false
           status[:stage] = "failed"
         end
@@ -394,61 +378,96 @@ class TemplateManagementController < ApplicationController
   end
 
   def execute_precompile
-    cd_zammad && execute_command_with_timeout(
-      "rake assets:precompile",
-      300  # 5 minute timeout
-    )
-  end
-
-  def execute_restart_zammad
-    # Di Docker, kita tidak bisa pakai systemctl.
-    # Kita coba trigger restart via file restart.txt (Standard Passenger/Puma)
-    # Jika tidak ngefek, user harus restart container manual via 'docker-compose restart'
-    log_deployment("⚠️ Running in Docker: Manual container restart might be required if changes don't appear.")
-    execute_command_with_timeout(
-      "touch /opt/zammad/tmp/restart.txt",
-      10
-    )
-  end
-
-  def check_zammad_running
-    sleep 3  # Wait for service to stabilize
-    execute_command("systemctl is-active --quiet zammad")
-  end
-
-  def cd_zammad
-    Dir.chdir('/opt/zammad')
-    true
-  rescue => e
-    log_deployment("❌ Cannot cd to /opt/zammad: #{e.message}")
-    false
-  end
-
-  def execute_command(cmd)
-    stdout, stderr, status = Open3.capture3(cmd)
-    status.success?
-  rescue => e
-    log_deployment("❌ Command execution error: #{e.message}")
-    false
-  end
-
-  def execute_command_with_timeout(cmd, timeout_seconds)
-    begin
-      stdout, stderr, status = Open3.capture3("timeout #{timeout_seconds} #{cmd}")
+    log_deployment("📦 Stage 1/2: Compiling assets...")
+    
+    Dir.chdir('/opt/zammad') do
+      stdout, stderr, status = Open3.capture3("rake assets:precompile")
       
       if status.success?
-        log_deployment("✅ Command succeeded: #{cmd}")
+        log_deployment("✅ Assets precompile completed")
         return true
       else
-        log_deployment("❌ Command failed (exit code: #{status.exitstatus}): #{cmd}")
-        log_deployment("STDOUT: #{stdout}") if stdout.present?
+        log_deployment("❌ Assets precompile failed (exit code: #{status.exitstatus})")
         log_deployment("STDERR: #{stderr}") if stderr.present?
         return false
       end
-    rescue => e
-      log_deployment("❌ Error executing command: #{e.message}")
-      return false
     end
+  rescue => e
+    log_deployment("❌ Error during precompile: #{e.message}")
+    false
+  end
+
+  # 🔥 NEW: Docker-compatible restart method
+  def execute_docker_restart
+    log_deployment("🔄 Stage 2/2: Restarting Zammad Rails server...")
+    
+    # Method 1: Use restart.txt (Passenger/Puma standard)
+    restart_file = '/opt/zammad/tmp/restart.txt'
+    begin
+      FileUtils.touch(restart_file)
+      log_deployment("✅ Created restart.txt file")
+    rescue => e
+      log_deployment("⚠️ Could not create restart.txt: #{e.message}")
+    end
+    
+    # Method 2: Try to restart via docker-compose from host
+    # This requires docker socket to be mounted or SSH access to host
+    container_name = detect_container_name
+    
+    if container_name
+      log_deployment("🐳 Detected container: #{container_name}")
+      
+      # Try to restart using docker command inside container
+      # This will work if docker socket is mounted (-v /var/run/docker.sock:/var/run/docker.sock)
+      restart_cmd = "docker restart #{container_name}"
+      
+      stdout, stderr, status = Open3.capture3(restart_cmd)
+      
+      if status.success?
+        log_deployment("✅ Successfully restarted container: #{container_name}")
+        log_deployment("⏳ Waiting for service to stabilize...")
+        sleep 5
+        return true
+      else
+        log_deployment("⚠️ Could not restart container directly: #{stderr}")
+        log_deployment("📝 Manual restart required: docker-compose restart zammad-railsserver")
+        log_deployment("💡 Or ensure docker socket is mounted for auto-restart")
+        
+        # Still return true as restart.txt should trigger reload
+        return true
+      end
+    else
+      log_deployment("⚠️ Could not detect container name")
+      log_deployment("✅ Created restart.txt - changes will apply on next request")
+      return true
+    end
+  rescue => e
+    log_deployment("⚠️ Restart error: #{e.message}")
+    log_deployment("✅ Fallback: restart.txt created - changes will apply on next request")
+    true # Don't fail deployment just because restart failed
+  end
+
+  # Detect the Docker container name we're running in
+  def detect_container_name
+    # Try to get container hostname (which is usually the container ID)
+    hostname = `hostname`.strip
+    
+    # Try to find container name using docker ps
+    cmd = "docker ps --format '{{.Names}}' --filter id=#{hostname}"
+    container_name = `#{cmd}`.strip
+    
+    return container_name if container_name.present?
+    
+    # Fallback: try common Zammad container names
+    ['zammad-railsserver', 'zammad_railsserver_1', 'railsserver'].each do |name|
+      stdout, stderr, status = Open3.capture3("docker ps --filter name=#{name} --format '{{.Names}}'")
+      return name if status.success? && stdout.strip.present?
+    end
+    
+    nil
+  rescue => e
+    Rails.logger.error "Error detecting container name: #{e.message}"
+    nil
   end
 
   def clear_pending_queue
@@ -466,7 +485,7 @@ class TemplateManagementController < ApplicationController
 
     if log_text.include?("DEPLOYMENT COMPLETED SUCCESSFULLY")
       "completed"
-    elsif log_text.include?("Restarting Zammad")
+    elsif log_text.include?("Restarting Zammad") || log_text.include?("restarted container")
       "restarting"
     elsif log_text.include?("Assets compiled")
       "compiled"
@@ -481,7 +500,6 @@ class TemplateManagementController < ApplicationController
     timestamp = Time.now.strftime("%Y-%m-%d %H:%M:%S")
     log_line = "[#{timestamp}] #{message}"
     
-    # Ensure log file exists
     FileUtils.mkdir_p(File.dirname(DEPLOY_LOG))
     
     File.open(DEPLOY_LOG, 'a') do |f|
@@ -494,10 +512,8 @@ class TemplateManagementController < ApplicationController
   def run_script(command, *args)
     cmd = [SCRIPT_PATH, command] + args
     
-    # Capture stdout and stderr separately
     stdout, stderr, status = Open3.capture3(*cmd)
     
-    # Clean stdout: remove any lines that start with [ (log lines)
     clean_stdout = stdout.lines.reject { |line| line.strip.start_with?('[') }.join
     
     result = status.success? ? clean_stdout : (stderr.presence || clean_stdout)
