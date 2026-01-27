@@ -32,14 +32,14 @@ x-shared:
       NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-50M}
       
       # Standard Vars
-      RAILS_TRUSTED_PROXIES:
-      ZAMMAD_HTTP_TYPE:
-      ZAMMAD_FQDN:
-      ZAMMAD_WEB_CONCURRENCY:
-      ZAMMAD_PROCESS_SESSIONS_JOBS_WORKERS:
-      ZAMMAD_PROCESS_SCHEDULED_JOBS_WORKERS:
-      ZAMMAD_PROCESS_DELAYED_JOBS_WORKERS:
-      ZAMMAD_SESSION_JOBS_CONCURRENT:
+      RAILS_TRUSTED_PROXIES: ${RAILS_TRUSTED_PROXIES:-['0.0.0.0/0','::/0']}
+      ZAMMAD_HTTP_TYPE: ${ZAMMAD_HTTP_TYPE:-https}
+      ZAMMAD_FQDN: ${ZAMMAD_FQDN}
+      ZAMMAD_WEB_CONCURRENCY: ${ZAMMAD_WEB_CONCURRENCY:-0}
+      ZAMMAD_PROCESS_SESSIONS_JOBS_WORKERS: ${ZAMMAD_PROCESS_SESSIONS_JOBS_WORKERS:-1}
+      ZAMMAD_PROCESS_SCHEDULED_JOBS_WORKERS: ${ZAMMAD_PROCESS_SCHEDULED_JOBS_WORKERS:-1}
+      ZAMMAD_PROCESS_DELAYED_JOBS_WORKERS: ${ZAMMAD_PROCESS_DELAYED_JOBS_WORKERS:-1}
+      ZAMMAD_SESSION_JOBS_CONCURRENT: ${ZAMMAD_SESSION_JOBS_CONCURRENT:-8}
 
     # ======================================================
     # 🔥 KEY CHANGE: BUILD FROM LOCAL DOCKERFILE
@@ -137,6 +137,13 @@ services:
   zammad-websocket:
     <<: *zammad-service
     command: ["zammad-websocket"]
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: ${RESTART:-always}
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
 
 volumes:
   elasticsearch-data:
